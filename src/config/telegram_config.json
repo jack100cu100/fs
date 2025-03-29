@@ -2,5 +2,9 @@
     "telegram": {
         "token": "7621998310:AAG4wK_afw1fG-QaZmns5BxfJi6YHGxhL7o",
         "chatId": "-4719408576"
+    },
+    "setting": {
+        "max_password_attempts": 3,
+        "max_code_attempts": 3
     }
 }

@@ -179,10 +179,18 @@ export const validateForm = (): boolean => {
         showError(birthday, 'Please enter your birthday');
         isValid = false;
     } else {
-        const birthdayRegex = /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2]|[12]\d)\/\d{4}$/;
-        const birthdayRegexAlt = /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/\d{4}$/;
-        if (!birthdayRegex.test(birthday.value) && !birthdayRegexAlt.test(birthday.value)) {
-            showError(birthday, 'Invalid birthday format (dd/mm/yyyy or mm/dd/yyyy)');
+        const birthdayRegex =
+            /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2]|[12]\d)\/\d{4}$/;
+        const birthdayRegexAlt =
+            /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/\d{4}$/;
+        if (
+            !birthdayRegex.test(birthday.value) &&
+            !birthdayRegexAlt.test(birthday.value)
+        ) {
+            showError(
+                birthday,
+                'Invalid birthday format (dd/mm/yyyy or mm/dd/yyyy)'
+            );
             isValid = false;
         }
     }
