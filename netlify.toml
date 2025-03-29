@@ -1,0 +1,40 @@
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
+
+[[redirects]]
+from = "/*"
+to = "/404"
+status = 404
+force = false
+
+[build]
+publish = "dist"
+command = "pnpm run build"
+ignore = "git log -1 --pretty=%B | grep -E '\\[skip ci\\]|\\[skip netlify\\]'"
+
+[[headers]]
+for = "/*"
+[headers.values]
+Access-Control-Allow-Origin = "*"
+Cache-Control = "public, max-age=604800"
+Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+Referrer-Policy = "strict-origin-when-cross-origin"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+
+[[headers]]
+for = "/*.{js,css,png,jpg,jpeg,webp,svg,gif}"
+[headers.values]
+Cache-Control = "public, max-age=604800, immutable"
+
+[[headers]]
+for = "/*.html"
+[headers.values]
+Cache-Control = "public, max-age=0, must-revalidate"
+X-Robots-Tag = "index, follow"
+
+[build.environment]
+NPM_FLAGS = "--legacy-peer-deps"
