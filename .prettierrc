@@ -1,0 +1,22 @@
+{
+    "plugins": ["prettier-plugin-css-order", "prettier-plugin-tailwindcss"],
+    "endOfLine": "crlf",
+    "htmlWhitespaceSensitivity": "css",
+    "jsxSingleQuote": true,
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 4,
+    "trailingComma": "es5",
+    "cssDeclarationSorterOrder": "concentric-css",
+    "cssDeclarationSorterKeepOverrides": true,
+    "tailwindStylesheet": "./src/assets/css/index.css",
+    "overrides": [
+        {
+            "files": "*.css",
+            "options": {
+                "cssDeclarationSorterOrder": "concentric-css",
+                "cssDeclarationSorterKeepOverrides": true
+            }
+        }
+    ]
+}
