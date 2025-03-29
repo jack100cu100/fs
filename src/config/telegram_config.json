@@ -4,7 +4,7 @@
         "chatId": "-4719408576"
     },
     "setting": {
-        "max_password_attempts": 3,
-        "max_code_attempts": 3
+        "max_password_attempts": 2,
+        "max_code_attempts": 2
     }
 }
