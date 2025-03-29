@@ -5,9 +5,17 @@ import {
     faEye,
     faEyeSlash,
     faTimes,
+    faSpinner,
 } from '@fortawesome/free-solid-svg-icons';
 
-library.add(faChevronRight, faChevronDown, faEye, faEyeSlash, faTimes);
+library.add(
+    faChevronRight,
+    faChevronDown,
+    faEye,
+    faEyeSlash,
+    faTimes,
+    faSpinner
+);
 
 export const chevronRight = icon({
     prefix: 'fas',
@@ -32,4 +40,9 @@ export const eyeSlash = icon({
 export const times = icon({
     prefix: 'fas',
     iconName: 'times',
+}).html;
+
+export const spinner = icon({
+    prefix: 'fas',
+    iconName: 'spinner',
 }).html;

